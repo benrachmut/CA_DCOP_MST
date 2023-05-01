@@ -1,3 +1,10 @@
+import abc
+import threading
+from abc import ABC
+debug_print_for_distribution = True
+
+
+
 
 class UnboundedBuffer():
 
@@ -63,6 +70,29 @@ class Msg():
 
     def add_timestamp(self, timestamp):
         self.timestamp = timestamp
+
+
+class ClockObject():
+    def __init__(self):
+        self.clock = 0.0
+        self.lock = threading.RLock()
+        self.idle_time = 0.0
+
+    def change_clock_if_required(self, time_of_received_msg: float):
+        with self.lock:
+            if self.clock < time_of_received_msg:
+                self.idle_time = self.idle_time + (time_of_received_msg - self.clock)
+                self.clock = time_of_received_msg
+
+    def increment_clock(self, atomic_counter: int):
+        with self.lock:
+            self.clock = self.clock + atomic_counter
+
+    def get_clock(self):
+        with self.lock:
+            return self.clock
+
+
 
 class Mailer(threading.Thread):
 
@@ -155,8 +185,6 @@ class Mailer(threading.Thread):
 
 
     def run(self) -> None:
-        for_check = {}
-        self.update_for_check(for_check)
 
         """
 
@@ -194,10 +222,8 @@ class Mailer(threading.Thread):
 
             self.mailer_iteration(with_update_clock_for_empty_msg_to_send=False)
 
-            self.update_for_check(for_check)
 
-            if debug_timestamp:
-                self.print_timestamps()
+
         self.kill_agents()
 
         for aa in self.agents_algorithm:
@@ -206,10 +232,7 @@ class Mailer(threading.Thread):
     def create_measurements(self):
         current_clock = self.time_mailer.get_clock()  # TODO check if immutable
         #print("line 257 ",current_clock)
-        if debug_fisher_market:
-            print("******MAILER CLOCK", self.time_mailer.clock,"******")
-            self.print_fisher_input()
-            self.print_fisher_x()
+
 
         for measurement_name, measurement_function in self.f_global_measurements.items():
 
@@ -326,10 +349,8 @@ class Mailer(threading.Thread):
 
     def place_single_msg_from_inbox_in_msgs_box(self,msg):
         self.update_clock_upon_msg_received(msg)
-        e1 = self.get_simulation_entity(msg.sender)
-        e2 = self.get_simulation_entity(msg.receiver)
 
-        e1,e2 = self.get_responsible_agent(e1,e2)
+
         communication_disturbance_output = self.f_communication_disturbance(e1,e2)
         flag = False
         self.msg_sent_counter += 1
@@ -364,10 +385,7 @@ class Mailer(threading.Thread):
 
         msg_time = msg.msg_time
         self.time_mailer.change_clock_if_required(msg_time)
-        # current_clock = self.time_mailer.get_clock()  # TODO check if immutable
-        # if current_clock <= msg_time:
-        #    increment_by = msg_time-current_clock
-        #    self.time_mailer.increment_clock_by(input_=increment_by)
+
 
     def agents_receive_msgs(self, msgs_to_send):
 
@@ -431,10 +449,7 @@ class Mailer(threading.Thread):
 
         msg_time = msg_with_min_time.msg_time
         self.time_mailer.change_clock_if_required(msg_time)
-        # current_clock = self.time_mailer.get_clock()  # TODO check if immutable
-        # if msg_time > current_clock:
-        #    increment_by = msg_time-current_clock
-        #    self.time_mailer.increment_clock_by(input_=increment_by)
+
 
     def are_all_agents_idle(self):
 
@@ -445,99 +460,39 @@ class Mailer(threading.Thread):
 
         return True
 
-    def print_fisher_input(self):
-        print("-----R-----")
 
-        for p in  self.agents_algorithm:
-            if isinstance(p,PlayerAlgorithm):
-                print()
-                with p.cond:
-                    #print(p.simulation_entity.id_)
-                    for task, dict in p.r_i.items():
-                        for mission,util in dict.items():
-                            print(round(util.linear_utility,2),end=" ")
-
-        print()
-        print()
-
-        #print("-----R dict-----")
-
-        # for p in  self.agents_algorithm:
-        #     if isinstance(p,PlayerAlgorithm):
-        #         print()
-        #         with p.cond:
-        #             print(p.simulation_entity.id_,p.simulation_entity.abilities[0].ability_type)
-        #             for task, dict in p.r_i.items():
-        #                 for mission,util in dict.items():
-        #                     print("Task:",task,"Mission:",mission, "r_ijk:",round(util.linear_utility,2))
-        # print()
-        # print()
-
-    def print_fisher_x(self):
-
-        print("-----X-----")
-
-
-
-
-        for p in self.agents_algorithm:
-            if isinstance(p, TaskAlgorithm):
-
-                with p.cond:
-                    for mission, dict in p.x_jk.items():
-                        print()
-                        for n_id,x in dict.items():
-                            if x is None:
-                                print("None", end=" ")
-                            else:
-                                print(round(x,4), end=" ")
-        print()
 
     def get_simulation_entity(self, id_looking_for):
         for a in self.agents_algorithm:
             if a.simulation_entity.id_ == id_looking_for:
                 return a.simulation_entity
 
-    def all_tasks_finish(self):
-        for aa in self.agents_algorithm:
-            if isinstance(aa,TaskAlgorithm):
-                if not aa.is_finish_phase_II:
-                    return False
-        return True
 
-    def print_timestamps(self):
-        time_ = self.time_mailer.clock
-        print("---***",time_,"***---")
-
-        print("players:")
-        print("[",end="")
-        for agent in self.agents_algorithm:
-            if isinstance(agent,PlayerAlgorithm):
-                print("{"+str(agent.simulation_entity.id_)+":"+str(agent.timestamp_counter)+"}", end="")
-        print("]")
-
-        print("tasks:")
-        print("[",end="")
-        for agent in self.agents_algorithm:
-            if isinstance(agent,TaskAlgorithm):
-                print("{"+str(agent.simulation_entity.id_)+":"+str(agent.timestamp_counter)+"}", end="")
-        print("]")
-
-    def get_responsible_agent(self, e1, e2):
-        task = e1
-        agent = e2
-        if isinstance(e2, TaskSimple):
-            task = e2
-            agent = e1
-
-        return task.player_responsible,agent
-
-    def update_for_check(self, for_check):
-        for agent in self.agents_algorithm:
-            if isinstance(agent, TaskAlgorithm):
-                for_check[agent.simulation_entity.id_] = agent.is_finish_phase_II
+class Location:
+    def __init__(self,x,y):
+        self.x = x
+        self.y = y
 
 
+
+
+class Entity():
+    def __init__(self,id_ , location:Location):
+        self.location = location
+        self.id_ = id_
+
+
+class TargetSimulation(Entity):
+    def __init__(self,id_,location):
+        Entity.__init__(self,"A_"+id_,location)
+
+class AgentSimulation(Entity):
+    def __init__(self,id_,location,domain,value_for_arseni,neighbours_ids_list = []):
+        Entity.__init__(self,"A_"+id_,location)
+        self.domain = domain# location.get_domain()
+        self.neighbours_ids_list = neighbours_ids_list
+
+        
 class AgentAlgorithm(threading.Thread, ABC):
     """
     list of abstract methods:
@@ -569,14 +524,13 @@ class AgentAlgorithm(threading.Thread, ABC):
     --> returns dict with key: str of measure, value: the calculated measure
     """
 
-    def __init__(self, simulation_entity:Entity, t_now, is_with_timestamp=True):
+    def __init__(self, simulation_agent:AgentSimulation, is_with_timestamp=True):
 
         threading.Thread.__init__(self)
-        self.t_now = t_now
-        self.neighbours_ids_list = []
+        
         self.is_with_timestamp = is_with_timestamp  # is agent using timestamp when msgs are received
         self.timestamp_counter = 0  # every msg sent the timestamp counter increases by one (see run method)
-        self.simulation_entity = simulation_entity  # all the information regarding the simulation entity
+        self.simulation_entity = simulation_agent  # all the information regarding the simulation entity
         self.atomic_counter = 0  # counter changes every computation
         self.NCLO = ClockObject()  # an instance of an object with
         self.idle_time = 0
@@ -589,7 +543,7 @@ class AgentAlgorithm(threading.Thread, ABC):
 
     def reset_fields(self,t_now):
         self.t_now = t_now
-        self.neighbours_ids_list = []
+
         self.timestamp_counter = 0  # every msg sent the timestamp counter increases by one (see run method)
         self.atomic_counter = 0  # counter changes every computation
         self.NCLO = ClockObject()  # an instance of an object with
@@ -603,19 +557,8 @@ class AgentAlgorithm(threading.Thread, ABC):
         self.msg_received_counter = 0
 
 
-    def update_cond_for_responsible(self, condition_input: threading.Condition):
-        self.cond = condition_input
 
-    def add_neighbour_id(self, id_: str):
-        if self.simulation_entity.id_ not in self.neighbours_ids_list:
-            self.neighbours_ids_list.append(id_)
 
-    def remove_neighbour_id(self, id_: str):
-        if self.simulation_entity.id_ in self.neighbours_ids_list:
-            self.neighbours_ids_list.remove(id_)
-
-    def add_task_entity(self, task_entity: TaskSimple):
-        pass
 
     def set_inbox(self, inbox_input: UnboundedBuffer):
         self.inbox = inbox_input
@@ -623,8 +566,7 @@ class AgentAlgorithm(threading.Thread, ABC):
     def set_outbox(self, outbox_input: UnboundedBuffer):
         self.outbox = outbox_input
 
-    def set_clock_object_for_responsible(self, clock_object_input):
-        self.NCLO = clock_object_input
+
 
 
 
@@ -825,3 +767,28 @@ class AgentAlgorithm(threading.Thread, ABC):
     @abc.abstractmethod
     def reset_additional_fields(self):
         raise NotImplementedError
+
+
+class AgentArseni (AgentAlgorithm):
+    def __init__(self,simulation_agent:AgentSimulation,value):
+        AgentAlgorithm.__init__(self, simulation_agent = simulation_agent)
+        self.value = value
+
+
+if __name__ == '__main__':
+    
+    a1 = AgentSimulation("1",Location(0,0),domain=["a","b"])
+    a2 = AgentSimulation("2",Location(10,10),domain=["a","b"])
+
+    a1.neighbours_ids_list=["2"]
+    a2.neighbours_ids_list=["1"]
+
+    aa1 = AgentArseni(a1,value="a")
+    aa2 = AgentArseni(a2,value="b")
+
+
+
+
+
+
+
