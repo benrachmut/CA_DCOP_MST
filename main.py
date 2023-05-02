@@ -487,8 +487,8 @@ class TargetSimulation(Entity):
         Entity.__init__(self,"A_"+id_,location)
 
 class AgentSimulation(Entity):
-    def __init__(self,id_,location,domain,value_for_arseni,neighbours_ids_list = []):
-        Entity.__init__(self,"A_"+id_,location)
+    def __init__(self,id_,location,domain,neighbours_ids_list = []):
+        Entity.__init__(self,id_,location)
         self.domain = domain# location.get_domain()
         self.neighbours_ids_list = neighbours_ids_list
 
@@ -773,6 +773,40 @@ class AgentArseni (AgentAlgorithm):
     def __init__(self,simulation_agent:AgentSimulation,value):
         AgentAlgorithm.__init__(self, simulation_agent = simulation_agent)
         self.value = value
+        self.to_compute
+        self.local_view = {}
+
+
+    def initiate_algorithm(self):
+        self.send_msgs()
+
+
+    def measurements_per_agent(self):
+        pass
+
+    def set_receive_flag_to_true_given_msg(self, msg):
+        self.to_compute = True
+
+    def get_current_timestamp_from_context(self, msg):
+        return 0
+
+    def update_message_in_context(self, msg):
+        sender = msg.sender
+        info = msg.information
+        self.local_view[sender] = info
+
+    def get_is_going_to_compute_flag(self):
+        return  self.to_compute
+
+    def compute(self):
+        for d in self.dom
+        for n,v in self.local_view.items():
+
+
+    def get_list_of_msgs_to_send(self):
+
+    def set_receive_flag_to_false(self):
+
 
 
 if __name__ == '__main__':
