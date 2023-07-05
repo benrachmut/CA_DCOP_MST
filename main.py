@@ -1,29 +1,30 @@
-import abc
-import threading
-from abc import ABC
-from Entities import *
-from general_communication_protocols import *
+
+from Globals import *
+from Problems import DCOP_MST
 
 
 
+
+def generate_dcop_mst():
+    ans = []
+    for agent_size in agents_sizes:
+        for target_size in targets_sizes:
+            for density in obstacle_densities:
+                for size in map_sizes:
+                    for sensing_range in sensing_ranges:
+                        for moving_range in moving_ranges:
+                            for cred_constant in cred_constants:
+                                for req_constant in req_constants:
+                                    for moving_speed in moving_speeds:
+                                        for rep in range(reps):
+                                            dcop_mst = DCOP_MST(rep,algorithm,agent_size, target_size, density, size, sensing_range, moving_range,
+                                                  cred_constant, req_constant,moving_speed)
+                                            ans.append(dcop_mst)
+    return ans
 
 
 if __name__ == '__main__':
-    
-    a1 = AgentSimulation("1",Location(0,0),domain=["a","b"])
-    a2 = AgentSimulation("2",Location(10,10),domain=["a","b"])
-    a3 = AgentSimulation("3",Location(5,5),domain=["a","b"])
-
-    a1.neighbours_ids_list=["2","3"]
-    a2.neighbours_ids_list=["1","3"]
-    a3.neighbours_ids_list=["2","3"]
-
-    algo_agents = [AgentArseni(a1,value="a"), AgentArseni(a2,value="b"), AgentArseni(a3,value="a")]
-
-
-
-
-    protocol  = get_communication_protocols(constants_delay_uniform = [1000])
-    pass
-
+    dcop_msts = generate_dcop_mst()
+    #communication_protocols = create_communication_protocols()
+    #run_dcop_msts(dcop_msts,communication_protocols)
 
