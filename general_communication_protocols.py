@@ -4,7 +4,7 @@ import random
 from abc import ABC
 import numpy as np
 
-from main import Entity
+from simulation_abstract_components import Entity, PlayerSimple, TaskSimple
 
 
 def quad_distance(entity1, entity2):
@@ -48,6 +48,16 @@ class CommunicationProtocol(ABC):
         self.rnd = random.Random(seed)
         self.rnd_numpy = np.random.default_rng(seed=seed)
 
+    def get_communication_disturbance(self, entity1: Entity, entity2: Entity):
+        if isinstance(entity1, TaskSimple) and isinstance(entity2, PlayerSimple):
+            if entity1.player_responsible.id_ == entity2.id_:
+                return 0
+
+        if isinstance(entity2, TaskSimple) and isinstance(entity1, PlayerSimple):
+            if entity2.player_responsible.id_ == entity1.id_:
+                return 0
+
+        return self.get_communication_disturbance_by_protocol(entity1, entity2)
 
     @abc.abstractmethod
     def get_communication_disturbance_by_protocol(self, entity1: Entity, entity2: Entity):
@@ -68,6 +78,7 @@ class CommunicationProtocolPerfectCommunication(CommunicationProtocol):
     def copy_protocol(self):
 
         return CommunicationProtocolPerfectCommunication()
+
 
 class CommunicationProtocolDelayUniform(CommunicationProtocol):
     def __init__(self, is_with_timestamp, ub):
@@ -244,7 +255,7 @@ class CommunicationProtocolDelayDistanceUniformExponent(CommunicationProtocolDis
         time_stamp = self.is_with_timestamp
         return CommunicationProtocolDelayDistanceUniformExponent(delta_x =delta_x,delta_y =delta_y,alpha = alpha,is_with_timestamp =time_stamp)
 
-def get_communication_protocols(width=0, length=0, is_with_timestamp=True, is_with_perfect_communication = False,
+def get_communication_protocols(width, length, is_with_timestamp, is_with_perfect_communication = False,
                                 constants_loss_distance=[],
                                 constants_loss_constant=[],
 
