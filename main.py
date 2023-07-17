@@ -1,7 +1,8 @@
-
+import Measurements
+from Entities import Mailer
 from Globals import *
 from Problems import DCOP_MST
-from general_communication_protocols import get_communication_protocols
+from General_communication_protocols import get_communication_protocols
 
 global length
 global width
@@ -42,10 +43,17 @@ def create_communication_protocols():
     return communication_protocols
 
 
+def get_mailer(protocol, dcop_mst):
+    f_termination_condition = is_run_finished
+    f_global_measurements = Measurements.get_measurments
+    f_communication_disturbance = protocol
+    return Mailer(f_termination_condition = f_termination_condition,f_global_measurements = f_global_measurements,f_communication_disturbance = f_communication_disturbance)
+
+
 def run_dcop_msts(dcop_msts, communication_protocols):
     for dcop_mst in dcop_msts:
         for protocol in communication_protocols:
-            mailer = get_mailer(protocol, dcop_mst) # TODO @ben
+            mailer = get_mailer(protocol, dcop_mst)
             dcop_mst.dcop_mst_meet_mailer(mailer) # TODO @ben
             mailer.mailer_meets_Dcop(dcop_mst.id_) # TODO @ben
             dcop_mst.initilize_and_start_agents()

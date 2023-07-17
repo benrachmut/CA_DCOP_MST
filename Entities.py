@@ -134,6 +134,7 @@ class Mailer(threading.Thread):
         # messages that arrive to their destination
         self.msg_received_counter = 0
 
+        self.dcop_msg
         self.last_time = 0
         self.delta_time = 9999999
 
@@ -208,7 +209,8 @@ class Mailer(threading.Thread):
 
         self.mailer_iteration(with_update_clock_for_empty_msg_to_send=True)
 
-        while not self.f_termination_condition(self.agents_algorithm, self):
+        while not self.f_termination_condition(self):
+
             self.create_measurements()
 
             self.self_check_if_all_idle_to_continue()
@@ -225,7 +227,7 @@ class Mailer(threading.Thread):
         # print("line 257 ",current_clock)
 
         for measurement_name, measurement_function in self.f_global_measurements.items():
-            measured_value = measurement_function(self.agents_algorithm)
+            measured_value = measurement_function(self.dcop_mst)
 
             self.measurements[measurement_name][current_clock] = measured_value
 

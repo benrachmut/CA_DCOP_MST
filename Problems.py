@@ -70,7 +70,7 @@ class DCOP_MST:
 
 
 
-    def dcop_mst_meet_mailer(self):
+    def dcop_mst_meet_mailer(self,mailer):
         pass
         #TODO ben
 
@@ -105,10 +105,12 @@ class DCOP_MST:
     def create_agents(self, selected_nodes):
         for i in range(self.agent_size):
             selected_node = selected_nodes.pop()
+            agent = None
             if self.algorithm == Algorithm.DSA_ASY:
-                self.agents.append(DSA_ASY( i, selected_node))
+                agent = DSA_ASY( i, selected_node, self.sensing_range,  self.cred_constant)
             if self.algorithm == Algorithm.DSA_SY:
-                self.agents.append(DSA_SY(i, selected_node))
+                agent = DSA_SY(i, selected_node, self.sensing_range,  self.cred_constant)
+            self.agents.append(agent)
 
     def create_targets(self, selected_nodes):
 

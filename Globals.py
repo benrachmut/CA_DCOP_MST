@@ -34,3 +34,5 @@ constants_loss_constant=[] # prob
 constants_delay_poisson = [100]# Pois(lambda)
 constants_delay_uniform=[] # U(0,UB) #---
 
+def is_run_finished(mailer):
+    return mailer.time_mailer.get_clock() >= max_nclo
